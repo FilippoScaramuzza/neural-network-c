@@ -1,0 +1,2 @@
+# Source Code for Implementing Neural Networks in Pure C
+This repo contains the source code for the blog series of [Implementing Neural Networks in Pure C](https://filipposcaramuzza.dev/2024/06/09/implementing-a-neural-network-in-pure-c/) @ [https://filipposcaramuzza.dev](https://filipposcaramuzza.dev).

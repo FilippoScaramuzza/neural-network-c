@@ -1,0 +1,93 @@
+# Object files
+*.o
+
+# Libraries
+*.a
+*.so
+
+# Executable files
+*.out
+*.exe
+
+# Debug files
+*.dSYM/
+*.d
+
+# Build directories
+/build/
+/bin/
+/obj/
+
+# Dependency files
+*.d
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Backup files
+*.bak
+*.old
+
+# IDE-specific files
+.vscode/
+.idea/
+*.code-workspace
+
+# System-specific files
+.DS_Store
+Thumbs.db
+
+# Compiled binary files
+*.elf
+*.map
+*.hex
+*.bin
+
+# Coverage files
+*.gcda
+*.gcno
+*.gcov
+
+# CMake files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Autotools files
+/aclocal.m4
+/autom4te.cache/
+/compile
+/config.guess
+/config.log
+/config.status
+/config.sub
+/configure
+/depcomp
+/install-sh
+/ltmain.sh
+/missing
+/m4/
+/Makefile.in
+/stamp-h1
+
+# Backup of build files
+*.orig
+
+# Compiled Python files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Other
+*.tar.gz
+*.zip
+*.rar
+*.7z
