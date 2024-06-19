@@ -7,7 +7,8 @@
 #include <stdio.h>
 #include <math.h>
 
-typedef struct {
+typedef struct
+{
     size_t rows;
     size_t cols;
     size_t stride;
@@ -30,7 +31,8 @@ void mat_dot(Matrix dst, Matrix a, Matrix b);
 void mat_sum(Matrix dst, Matrix a);
 void mat_sigf(Matrix a);
 
-typedef struct {
+typedef struct
+{
     size_t *archi;
     size_t num_layers;
     Matrix *weights;
@@ -46,11 +48,13 @@ typedef struct {
 
 NeuralNetwork nn_alloc(size_t *archi, size_t num_layers);
 void nn_rand(NeuralNetwork nn, float min, float max);
+void nn_fill(NeuralNetwork nn, float val);
 void nn_print(NeuralNetwork nn, char *name);
 void nn_forward(NeuralNetwork nn);
 float nn_mse(NeuralNetwork nn, Matrix train_in, Matrix train_out);
 void nn_finite_diff(NeuralNetwork nn, NeuralNetwork grad, float eps, Matrix train_in, Matrix train_out);
-void nn_gradient_descent(NeuralNetwork nn, float eps, float rate, Matrix train_in, Matrix train_out, size_t iterations);
+void nn_backpropagation(NeuralNetwork nn, NeuralNetwork grad, Matrix train_in, Matrix train_out);
+void nn_gradient_descent(NeuralNetwork nn, float rate, Matrix train_in, Matrix train_out, size_t iterations);
 
 #endif // NN_H
 
@@ -129,14 +133,13 @@ void mat_cpy(Matrix dst, Matrix src)
     }
 }
 
-Matrix mat_row(Matrix m, size_t row) 
+Matrix mat_row(Matrix m, size_t row)
 {
     return (Matrix){
         .rows = 1,
         .cols = m.cols,
         .stride = m.stride,
-        .data = &MAT_AT(m, row, 0)
-    };
+        .data = &MAT_AT(m, row, 0)};
 }
 
 void mat_sum(Matrix dst, Matrix a)
@@ -192,7 +195,7 @@ NeuralNetwork nn_alloc(size_t archi[], size_t num_layers)
     nn.weights = malloc(num_layers * sizeof(*nn.weights));
     nn.biases = malloc(num_layers * sizeof(*nn.biases));
     nn.activations = malloc((num_layers + 1) * sizeof(*nn.activations));
-    
+
     nn.activations[0] = mat_alloc(1, input_size);
 
     for (size_t i = 1; i <= nn.num_layers; i++)
@@ -211,6 +214,15 @@ void nn_rand(NeuralNetwork nn, float min, float max)
     {
         mat_rand(nn.weights[i], min, max);
         mat_rand(nn.biases[i], min, max);
+    }
+}
+
+void nn_fill(NeuralNetwork nn, float val)
+{
+    for (size_t i = 0; i < nn.num_layers; i++)
+    {
+        mat_fill(nn.weights[i], val);
+        mat_fill(nn.biases[i], val);
     }
 }
 
@@ -259,7 +271,7 @@ float nn_mse(NeuralNetwork nn, Matrix train_in, Matrix train_out)
     }
 
     return result / train_in.rows;
-} 
+}
 
 void nn_finite_diff(NeuralNetwork nn, NeuralNetwork grad, float eps, Matrix train_in, Matrix train_out)
 {
@@ -292,12 +304,73 @@ void nn_finite_diff(NeuralNetwork nn, NeuralNetwork grad, float eps, Matrix trai
     }
 }
 
-void nn_gradient_descent(NeuralNetwork nn, float eps, float rate, Matrix train_in, Matrix train_out, size_t iterations)
+void nn_backpropagation(NeuralNetwork nn, NeuralNetwork grad, Matrix ti, Matrix to)
+{
+    nn_fill(grad, 0.0f);
+    size_t num_samples = ti.rows;
+
+    for (size_t i = 0; i < num_samples; i++)
+    {
+        // Forward
+        mat_cpy(NN_INPUT(nn), mat_row(ti, i));
+        nn_forward(nn);
+        
+        for (size_t j = 0; j < grad.num_layers; j++)
+        {
+            mat_fill(grad.activations[j], 0.0f);
+        }
+        
+        for (size_t j = 0; j < to.cols; j++)
+        {
+            MAT_AT(NN_OUTPUT(grad), 0, j) = 2 * (MAT_AT(NN_OUTPUT(nn), 0, j) - MAT_AT(to, i, j)) *
+                                             MAT_AT(NN_OUTPUT(nn), 0, j) * (1 - MAT_AT(NN_OUTPUT(nn), 0, j));
+        }
+
+        // Backward pass
+        for (size_t l = nn.num_layers; l > 0; l--)
+        {
+            for (size_t j = 0; j < nn.activations[l].cols; j++)
+            {
+                float dC_dA = MAT_AT(grad.activations[l], 0, j);
+                MAT_AT(grad.biases[l-1], 0, j) += dC_dA;
+
+                for (size_t k = 0; k < nn.activations[l - 1].cols; k++)
+                {
+                    MAT_AT(grad.weights[l - 1], k, j) += dC_dA * MAT_AT(nn.activations[l - 1], 0, k);
+                    MAT_AT(grad.activations[l - 1], 0, k) += dC_dA * MAT_AT(nn.weights[l - 1], k, j) *
+                                                            MAT_AT(nn.activations[l - 1], 0, k) * (1 - MAT_AT(nn.activations[l - 1], 0, k));
+                }
+            }
+        }
+    }
+
+    for (size_t i = 0; i < grad.num_layers; i++)
+    {
+        for (size_t j = 0; j < grad.weights[i].rows; j++)
+        {
+            for (size_t k = 0; k < grad.weights[i].cols; k++)
+            {
+                MAT_AT(grad.weights[i], j, k) /= num_samples;
+            }
+        }
+        for (size_t j = 0; j < grad.biases[i].rows; j++)
+        {
+            for (size_t k = 0; k < grad.biases[i].cols; k++)
+            {
+                MAT_AT(grad.biases[i], j, k) /= num_samples;
+            }
+        }
+    }
+}
+
+
+void nn_gradient_descent(NeuralNetwork nn, float rate, Matrix train_in, Matrix train_out, size_t iterations)
 {
     NeuralNetwork grad = nn_alloc(nn.archi, nn.num_layers);
     for (size_t it = 0; it < iterations; it++)
     {
-        nn_finite_diff(nn, grad, eps, train_in, train_out);
+        nn_finite_diff(nn, grad, 1e-1, train_in, train_out);
+        //nn_backpropagation(nn, grad, train_in, train_out);
 
         for (size_t i = 0; i < nn.num_layers; i++)
         {

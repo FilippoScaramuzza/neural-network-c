@@ -4,7 +4,7 @@
 
 int main(void)
 {
-    srand(time(NULL));
+    srand(69);
     size_t archi[] = {2, 2, 1};
     NeuralNetwork nn = nn_alloc(archi, ARRAY_LEN(archi) - 1);
     nn_rand(nn, 0.0f, 1.0f);
@@ -32,11 +32,9 @@ int main(void)
 
     printf("MSE BEFORE: %f\n", nn_mse(nn, train_in, train_out));
 
-    nn_gradient_descent(nn, 1e-1, 20, train_in, train_out, 500);
+    nn_gradient_descent(nn, 10, train_in, train_out, 1000*1000);
 
     printf("MSE  AFTER: %f\n", nn_mse(nn, train_in, train_out));
-
-    nn_print(nn, "nn");
 
     for (size_t i = 0; i < 4; i++)
     {
